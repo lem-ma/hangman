@@ -1,4 +1,4 @@
-/* Hangman Version 1.0
+/* Hangman Version 1.1
  * Author: lem-ma
 */
 
@@ -17,14 +17,13 @@ char obtainchar(void)
 
 int hangman(char* word, int len)
 {
+    puts("Note: Enter <Tab><Enter> at any time to reveal the answer.\n");
     int keep=1,hyphen=0;
     char c,chosen[27],guessed[len+1],*dum;
     for(int i=0;i<27;i++) chosen[i]='\0';
     for(int i=0;i<len;i++)
-    {
-        if(word[i]=='-') guessed[i]=putchar('-'),hyphen++;
-        else guessed[i]=putchar('_');
-    }
+        (word[i]=='-')?(guessed[i]=putchar('-'),hyphen++):
+            (guessed[i]=putchar('_'));
     guessed[len]='\0';
     int nchance=6,ncorrect=hyphen,nchosen=0;
     printf(" \t6 more chances, %d more letters\n",len-ncorrect);
@@ -32,12 +31,15 @@ int hangman(char* word, int len)
     {
         fputs("Your guess (enter a lowercase letter): ",stdout);
         while((c=obtainchar())<'a'||c>'z'||strchr(chosen,c))
+        {
+            if(c=='\t') return 0;
             fputs("Invalid input! Please input again: ",stdout);
+        }
         chosen[nchosen]=c;
         nchosen++;
         if((dum=strchr(word,c)))
-            for(int i=dum-word;*dum;i++,dum++)
-                (*dum==c)&&(guessed[i]=c,ncorrect++);
+            for(int i=dum-word;*dum;
+                    ((*dum++)==c)?(ncorrect++,guessed[i++]=c):(i++));
         else nchance--;
         keep=(ncorrect!=len)&&(nchance!=0);
         printf("\n%s \t%d more chance(s), %d more letter(s)\nChosen: %s\n"\
@@ -59,11 +61,11 @@ int main(int argc, char* argv[])
     rewind(fp);
     char buffer[lSize+1];
     if(lSize!=fread(buffer,sizeof(char),lSize,fp))
-        fclose(fp),fputs("read fails",stderr),perror("error"),exit(1);
+        fclose(fp),puts("read fails"),exit(1);
     fclose(fp);
     buffer[lSize]='\n';
     srand(time(NULL));
-    puts("Hangman\nVersion 1.0 \tAuthor: lem-ma\n");
+    puts("Hangman\nVersion 1.1 \tAuthor: lem-ma\n");
     int cont=1;
     while(cont)
     {
@@ -75,28 +77,16 @@ int main(int argc, char* argv[])
             if(control&&buffer[end]==' ') space=end,control=0;
         if(space==start)
             puts("Wrongly formatted wordlist!"),getchar(),exit(1);
-        char *word,*definition;
-        word=malloc((space-start+1)*sizeof(char));
-        if(!word) puts("RAM error!"),exit(1);
-        for(int i=0;i<space-start;i++)
+        buffer[space]='\0';
+        for(int i=start;(i<space)||hangman(buffer+start,space-start);i++)
         {
-            if('A'<=buffer[start+i]&&'Z'>=buffer[start+i])
-                word[i]=buffer[start+i]-'A'+'a';
-            else if(('a'<=buffer[start+i]&&'z'>=buffer[start+i])\
-                    ||buffer[start+i]=='-')
-                word[i]=buffer[start+i];
-            else puts("Wrongly formatted wordlist!"),getchar(),exit(1);
+            if('A'<=buffer[i]&&'Z'>=buffer[i]) buffer[i]+='a'-'A';
+            else if(('a'>buffer[i]||'z'<buffer[i])&&buffer[i]!='-')
+                puts("Wrongly formatted wordlist!"),getchar(),exit(1);
         }
-        word[space-start]='\0';
-        hangman(word,space-start);
-        definition=malloc((end-space)*sizeof(char));
-        if(!definition) puts("RAM error!"),exit(1);
-        memcpy(definition,buffer+space+1,(end-space-1)*sizeof(char));
-        definition[end-space-1]='\0';
-        printf("\n%s %s\n",word,definition);
-        free(word);
-        free(definition);
-        puts("\nEnter \"q\" to exit, or otherwise to start a new game.");
+        buffer[space]=' ';
+        fwrite(buffer+start,sizeof(char),end-start,stdout);
+        puts("\n\nEnter \"q\" to exit, or otherwise to start a new game.");
         if(obtainchar()=='q') cont=0;
     }
     return 0;
